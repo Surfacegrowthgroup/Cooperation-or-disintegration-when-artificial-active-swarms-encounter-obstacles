@@ -1,0 +1,1 @@
+# Cooperarion-or-disintergration-when-artificial-active-swarms-encounter-obstacles

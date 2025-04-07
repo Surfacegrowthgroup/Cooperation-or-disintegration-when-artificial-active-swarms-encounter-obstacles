@@ -19,17 +19,17 @@ All the parameters is controled by the class Setup in file "counter_settings.py"
 | times        | the total time steps of one simultaion              |
 | St           | the time step that start to take average            |
 | loop_times   | the The number of independent calculations          |
-| width        | the vertical length of system *W*                   |
-| length       | the horizontal length of disorder region *L_{o}*    |
+| width        | the vertical length of system $W$                   |
+| length       | the horizontal length of disorder region $L_{o}$    |
 | left_length  | the horizontal length of left display region        |
-| place_length | the horizontal length of place region *L_{p}*       |
-| white_length | the horizontal length of buffer region *L_{w}*      |
-| end_length   | the horizontal length of end region *L_{e}*         |
-| radius       | the interactions radius of active particles *R_{a}* |
-| strength     | the amplitude of thermal noise *\eta*               |
-| speed        | the speed of active particles *v_{0}*               |
+| place_length | the horizontal length of place region $L_{p}$       |
+| white_length | the horizontal length of buffer region $L_{w}$      |
+| end_length   | the horizontal length of end region $L_{e}$         |
+| radius       | the interactions radius of active particles $R_{a}$ |
+| strength     | the amplitude of thermal noise $\eta$               |
+| speed        | the speed of active particles $v_{0}$               |
 | que_stren    | the amplitude of quenched noise                     |
-| que_radius   | the interactions radius of quenched disorder *R_{o}*|
+| que_radius   | the interactions radius of quenched disorder $R_{o}$|
 
 ### Drawing of morphology
 

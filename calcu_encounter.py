@@ -5,7 +5,7 @@ import scipy.spatial
 import matplotlib.pyplot as plt
 import multiprocessing
 import networkx
-from tqdm import tqdm
+from tqdm.rich import tqdm
 
 from counter_settings import Setup
 
@@ -13,33 +13,6 @@ from counter_settings import Setup
 class Main:
 
     def __init__(self):
-        """
-        the function __init__ is used to initialize all the global variable
-        the detial of these variabels is listed following:
-
-        self.setup: to gain the settings class from the conter_settings.py
-
-        self.Angle: including the angle of Na particles with shape (1,Na)
-        self.pos: including the position of Na particles with shape (Na,2)
-        self.vel: including the velocity vector of N particles with shape (Na,2)
-
-        self.que_pos: including the position of No obstalces with shape (No,2)
-        self.que_noise: including the disorder of obstacles with shape (1,No)
-        self.tree_que: the kdtree build by obstalces
-
-        self.bar: progress bar of this program
-        self.neigh: the neigh list of Na particles, it is a ndarray with Na elements and every element is a list including the neighbor
-                    index of this paritcle.
-        self.net: the graph of system, the nodes is the position of particles and the edges is the neighbor relation bewteen two particles
-        self.indL: the index of particles positioned in the left of disorder region
-        self.indR: the index of particles positioned in the right of disorder region
-
-        self.OrderL: the order parameter of clusters positioned in the left of disorder region
-        self.OrderR: the order parameter of clusters positioned in the right of disorder region
-
-        self.ClusterL: the cluster coeffcient of clusters positioned in the left of disorder region
-        self.ClusterR: the cluster coeffcient of clusters positioned in the right of disorder region
-        """
         self.setup = Setup()
 
         self.pos = [self.setup.place_length, self.setup.width] * np.random.rand(self.setup.particles, 2)
@@ -51,12 +24,16 @@ class Main:
         self.que_noise = self.setup.que_stren * 2 * np.pi * (np.random.rand(1, self.setup.que_num) - 0.5)
         self.tree_que = scipy.spatial.KDTree(self.que_pos, boxsize=[0, self.setup.width])
 
-        self.bar = None;  self.neigh = None;  self.net = None
+        self.bar = None
+        self.neigh = None  # 单一时刻全局粒子的邻居列表
+        self.net = None
         self.indL = self.pos[:, 0] < self.setup.begin_length
         self.indR = self.pos[:, 0] > (self.setup.begin_length + self.setup.length)
 
-        self.OrderL = np.zeros([1, self.setup.times]);  self.OrderR = np.zeros([1, self.setup.times])
-        self.ClusterL = np.zeros([1, self.setup.times]);  self.ClusterR = np.zeros([1, self.setup.times])
+        self.OrderL = np.zeros([1, self.setup.times])
+        self.OrderR = np.zeros([1, self.setup.times])
+        self.ClusterL = np.zeros([1, self.setup.times])
+        self.ClusterR = np.zeros([1, self.setup.times])
 
     def cal_order(self, ind):
         locvel = self.vel[ind]
@@ -75,20 +52,20 @@ class Main:
         self.net.add_edges_from(edges)
 
     def calcu_angle(self):
-        tree = scipy.spatial.KDTree(self.pos, boxsize=[self.setup.length, self.setup.width])
+        tree = scipy.spatial.KDTree(self.pos, boxsize=[0, self.setup.width])
         self.neigh = tree.query_ball_point(self.pos, r=self.setup.radius, workers=-1)
-        angles_flat = self.Angle[0]
+        angles_flat = self.Angle[0]  # 准备工作，将角度数组展平为1D，构建邻居数量数组，并预计算所有sin和cos值
         sin_values = np.sin(angles_flat);  cos_values = np.cos(angles_flat)
         num_neighbors = [len(nlist) for nlist in self.neigh]
 
-        all_neighbors = np.concatenate(self.neigh)
-        indptr = np.zeros(self.setup.particles + 1, dtype=int)
-        indptr[1:] = np.cumsum(num_neighbors)
+        all_neighbors = np.concatenate(self.neigh)  # 合并总邻居数组
+        indptr = np.zeros(self.setup.particles + 1, dtype=int)  # 分隔N个位置的索引数组应当包含N+1个数字
+        indptr[1:] = np.cumsum(num_neighbors)  # 构建分段索引
 
-        sum_sin = np.add.reduceat(sin_values[all_neighbors], indptr[:-1])
+        sum_sin = np.add.reduceat(sin_values[all_neighbors], indptr[:-1])  # 计算每个粒子邻居的sin和cos总和
         sum_cos = np.add.reduceat(cos_values[all_neighbors], indptr[:-1])
 
-        counts = np.array(num_neighbors, dtype=np.float32)
+        counts = np.array(num_neighbors, dtype=np.float32)  # 计算平均角度
         avg_sin = sum_sin / counts;  avg_cos = sum_cos / counts
         new_angles = np.arctan2(avg_sin, avg_cos)
 
@@ -98,7 +75,7 @@ class Main:
         influ_angle = np.zeros([1, self.setup.particles])
         que_neigh = self.tree_que.query_ball_point(self.pos, r=self.setup.que_radius, workers=-1)
         for i in range(self.setup.particles):
-            ls = que_neigh[i]
+            ls = que_neigh[i]  # 第i个粒子的淬火邻居
             if list(ls):
                 influ_angle[0][i] = self.que_noise[0][ls].mean()
 
@@ -107,12 +84,12 @@ class Main:
     def update_position(self):
         self.Angle = self.calcu_angle() + \
                      self.setup.strength * np.random.randn(1, self.setup.particles) + self.check_quench()
-        self.vel = np.vstack([np.cos(self.Angle), np.sin(self.Angle)]).T
+        self.vel = np.vstack([np.cos(self.Angle), np.sin(self.Angle)]).T  # 每行是一个粒子的速度向量
 
-        self.prepare_network()
+        self.prepare_network()  # 创建当前时刻的图
 
         self.pos = self.pos + self.setup.speed * self.vel
-        self.pos[:, 1] = self.pos[:, 1] % self.setup.width
+        self.pos[:, 1] = self.pos[:, 1] % self.setup.width  # 横向非周期性边界，所以仅在宽度方向上进行周期性边界处理
 
         self.indL = self.pos[:, 0] < self.setup.begin_length
         self.indR = self.pos[:, 0] > (self.setup.begin_length + self.setup.length)
@@ -123,7 +100,7 @@ class Main:
 
         self.pos = [self.setup.place_length, self.setup.width] * np.random.rand(self.setup.particles, 2)
         self.Angle = (np.random.rand(1, self.setup.particles) - 0.5) * np.pi
-        self.vel = np.vstack([np.cos(self.Angle), np.sin(self.Angle)]).T
+        self.vel = np.vstack([np.cos(self.Angle), np.sin(self.Angle)]).T  # 每行是一个粒子的速度向量
 
         self.que_pos = [self.setup.length, self.setup.width] * np.random.rand(self.setup.que_num, 2) + \
                        [self.setup.begin_length, 0]
@@ -133,12 +110,12 @@ class Main:
         self.indL = self.pos[:, 0] < self.setup.begin_length
         self.indR = self.pos[:, 0] > (self.setup.begin_length + self.setup.length)
 
-    def run(self):
+    def run(self, coret):
         tmp_ratio = np.zeros(self.setup.var_times)
         tmp_OrderL = np.zeros(self.setup.var_times);  tmp_OrderR = np.zeros(self.setup.var_times)
         tmp_ClusterL = np.zeros(self.setup.var_times);  tmp_ClusterR = np.zeros(self.setup.var_times)
         res = dict({})
-        self.bar = tqdm(total=self.setup.var_times * self.setup.loop_times)
+        self.bar = tqdm(total=self.setup.var_times * self.setup.loop_times, desc=f'current time:{coret}')
 
         for loop in range(self.setup.loop_times):
             for var in range(self.setup.var_times):
@@ -156,10 +133,10 @@ class Main:
                 tmp_ClusterL[var] += self.ClusterL[0][self.setup.St:].mean()
                 tmp_ClusterR[var] += self.ClusterR[0][self.setup.St:].mean()
 
-                self.setup.length += self.setup.var_step
+                self.setup.width += self.setup.var_step  # 变量变化循环时要改变变量并之后更新信息
                 self.bar.update(1)
 
-            self.setup.length = self.setup.var
+            self.setup.width = self.setup.var  # 重复循环时要将变量大小重置
 
         self.bar.close()
 
@@ -174,14 +151,14 @@ if __name__ == "__main__":
     ai = Main()
     # ai.run()
 
-    core_num = 8
-    loop_t = 2
+    core_num = 5  # 5
+    loop_t = 4
     pool = multiprocessing.Pool(core_num)
-    data = [pool.apply_async(func=ai.run, args=()) for i in range(core_num * loop_t)]
+    data = [pool.apply_async(func=ai.run, args=(i,)) for i in range(core_num * loop_t)]
     result = {
         'ratio': 0,
-        'OrderL': 0, 'OrderR': 0,
-        'ClusterL': 0, 'ClusterR': 0,
+        'OrderL': 0,  'OrderR': 0,
+        'ClusterL': 0,  'ClusterR': 0,
     }
     for d in data:
         result['ratio'] += d.get()['ratio']
@@ -191,7 +168,7 @@ if __name__ == "__main__":
     result['OrderL'] /= (core_num * loop_t);  result['OrderR'] /= (core_num * loop_t)
     result['ClusterL'] /= (core_num * loop_t);  result['ClusterR'] /= (core_num * loop_t)
     plt.plot(result['ratio'], 'o', label='$R$')
-    plt.plot(result['OrderL'], 'o', label='$\psi_o$');  plt.plot(result['OrderR'], 'o', label='$\psi_e$')
+    plt.plot(result['OrderL'], 'o', label=r'$\psi_o$');  plt.plot(result['OrderR'], 'o', label=r'$\psi_e$')
     plt.plot(result['ClusterL'], 'o', label='$C_o$');  plt.plot(result['ClusterR'], 'o', label='$C_e$')
     plt.legend(loc=0);  plt.show()
     print(result)

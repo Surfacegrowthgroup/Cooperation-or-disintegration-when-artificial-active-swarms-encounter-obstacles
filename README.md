@@ -14,8 +14,8 @@ All the parameters is controled by the class Setup in file "counter_settings.py"
 
 | Parameter    | Meaning                                             |
 | ------------ |---------------------                                |
-| par_denisty  | the density of active particles                     |
-| que_density  | the density of quenched disorder                    |
+| par_denisty  | the density of active particles $\rho$              |
+| que_density  | the density of quenched disorder $\rho_{o}$         |
 | times        | the total time steps of one simultaion              |
 | St           | the time step that start to take average            |
 | loop_times   | the The number of independent calculations          |

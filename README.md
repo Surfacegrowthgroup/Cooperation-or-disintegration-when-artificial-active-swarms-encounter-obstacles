@@ -28,7 +28,7 @@ All the parameters is controled by the class Setup in file "counter_settings.py"
 | radius       | the interactions radius of active particles $R_{a}$ |
 | strength     | the amplitude of thermal noise $\eta$               |
 | speed        | the speed of active particles $v_{0}$               |
-| que_stren    | the amplitude of quenched noise                     |
+| que_stren    | the amplitude of quenched noise $H$                 |
 | que_radius   | the interactions radius of quenched disorder $R_{o}$|
 
 ### Drawing of morphology

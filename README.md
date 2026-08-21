@@ -11,7 +11,7 @@
 - `postprocess.py` computes the passage rate, order parameters, and clustering coefficients from source trajectories.
 - `animate.py`, `feature_plot.py`, and `cli.py` provide morphology animation, feature plotting, and a unified command-line interface, respectively.
 
-By default, source trajectories are written to `data/raw/encounter/<submission>/`, and feature files are written to `data/processed/encounter/<submission>/`. Both are NAS-backed persistent project content. Temporary figures are written by default to `tmp/feature-plots/<submission>/`.
+By default, source trajectories are written to `data/raw/<submission>/`, and feature files are written to `data/processed/<submission>/`. Both are NAS-backed persistent project content. Temporary figures are written by default to `tmp/feature-plots/<submission>/`.
 
 ### Running environment
 
